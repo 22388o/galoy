@@ -68,6 +68,10 @@ type NewUserInfo = {
   phoneMetadata: PhoneMetadata | null
 }
 
+type PhoneMetadataValidator = {
+  validate(phoneMetadata: PhoneMetadata | null): true | ApplicationError
+}
+
 interface IUsersRepository {
   findById(userId: UserId): Promise<User | RepositoryError>
   findByUsername(username: Username): Promise<User | RepositoryError>

@@ -129,6 +129,10 @@ export const mapError = (error: ApplicationError): CustomApolloError => {
       message = "Reward for quiz question was already claimed."
       return new ValidationInternalError({ message, logger: baseLogger })
 
+    case "InvalidPhoneMetadataForRewardError":
+      message = "Unsupported phone carrier for rewards."
+      return new ValidationInternalError({ message, logger: baseLogger })
+
     case "RouteNotFoundError":
       message = "Unable to find a route for payment."
       return new RouteFindingError({ message, logger: baseLogger })
@@ -239,8 +243,8 @@ export const mapError = (error: ApplicationError): CustomApolloError => {
     case "UserPhoneCodeAttemptIpRateLimiterExceededError":
     case "PhoneProviderServiceError":
     case "UnknownPhoneProviderServiceError":
-    case "RewardMissingMetadataError":
-    case "RewardNonValidTypeError":
+    case "MissingPhoneMetadataError":
+    case "InvalidPhoneMetadataTypeError":
     case "InvalidAccountStatusError":
     case "InvalidScanDepthAmount":
       message = `Unknown error occurred (code: ${error.name})`
