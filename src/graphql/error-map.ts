@@ -14,6 +14,7 @@ import {
   InvalidCoordinatesError,
   InvalidBusinessTitleLengthError,
   PhoneCodeError,
+  UsernameNotAvailableError,
 } from "@graphql/error"
 import { baseLogger } from "@services/logger"
 
@@ -155,6 +156,9 @@ export const mapError = (error: ApplicationError): CustomApolloError => {
 
     case "InvalidBusinessTitleLengthError":
       return new InvalidBusinessTitleLengthError({ logger: baseLogger })
+
+    case "UsernameNotAvailableError":
+      return new UsernameNotAvailableError({ logger: baseLogger })
 
     // ----------
     // Unhandled below here

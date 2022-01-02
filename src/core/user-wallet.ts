@@ -135,6 +135,7 @@ export abstract class UserWallet {
     return true
   }
 
+  // TODO(remove) deprecated
   async updateUsername({
     username,
   }): Promise<{ username: string | undefined; id: string }> {

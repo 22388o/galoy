@@ -337,6 +337,7 @@ type Mutation {
   userRequestAuthCode(input: UserRequestAuthCodeInput!): SuccessPayload!
   userUpdateLanguage(input: UserUpdateLanguageInput!): UserUpdateLanguagePayload!
   userUpdateUsername(input: UserUpdateUsernameInput!): UserUpdateUsernamePayload!
+    @deprecated(reason: "Username will be moved to @Handle in Accounts")
 }
 
 type MyUpdatesPayload {
