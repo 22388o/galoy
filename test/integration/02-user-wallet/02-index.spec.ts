@@ -1,10 +1,18 @@
 import { getGenericLimits, MS_PER_HOUR } from "@config/app"
-import { generateTokenHelper, getAndCreateUserWallet } from "test/helpers"
+
 import { WalletsRepository } from "@services/mongoose"
 import { Accounts } from "@app"
 import { CsvWalletsExport } from "@services/ledger/csv-wallet-export"
 
+import {
+  createUserWallet,
+  generateTokenHelper,
+  getAndCreateUserWallet,
+  getDefaultWalletIdByTestUserIndex,
+} from "test/helpers"
+
 let userWallet0, userWallet1, userWallet2
+let wallet0
 const username = "user0" as Username
 
 describe("UserWallet", () => {
@@ -12,11 +20,14 @@ describe("UserWallet", () => {
     userWallet0 = await getAndCreateUserWallet(0)
     userWallet1 = await getAndCreateUserWallet(1)
     userWallet2 = await getAndCreateUserWallet(2)
+
+    wallet0 = await getDefaultWalletIdByTestUserIndex(0)
+
     // load funder wallet before use it
-    await getAndCreateUserWallet(4)
+    await createUserWallet(4)
 
     // load edit for admin-panel manual testing
-    await getAndCreateUserWallet(13)
+    await createUserWallet(13)
   })
 
   it("has a role if it was configured", async () => {
@@ -90,7 +101,7 @@ describe("UserWallet", () => {
     })
 
     it("does not allow set username if already taken", async () => {
-      await getAndCreateUserWallet(2)
+      await createUserWallet(2)
       await expect(userWallet2.setUsername({ username })).rejects.toThrow()
     })
 
@@ -138,7 +149,7 @@ describe("UserWallet", () => {
       "id,walletId,type,credit,debit,fee,currency,timestamp,pendingConfirmation,journalId,lnMemo,usd,feeUsd,recipientWalletId,username,memoFromPayer,paymentHash,pubkey,feeKnownInAdvance,address,txHash"
     it("exports to csv", async () => {
       const csv = new CsvWalletsExport()
-      await csv.addWallet(userWallet0.user.walletId)
+      await csv.addWallet(wallet0)
       const base64Data = csv.getBase64()
       expect(typeof base64Data).toBe("string")
       const data = Buffer.from(base64Data, "base64")
