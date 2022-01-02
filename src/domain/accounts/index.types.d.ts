@@ -13,6 +13,8 @@ type Account = {
   readonly username: Username
   readonly defaultWalletId: WalletId
   readonly ownerId: UserId
+  readonly depositFeeRatio: DepositFeeRatio
+  readonly withdrawFee: WithdrawFee
   level: AccountLevel
   status: AccountStatus
   readonly walletIds: WalletId[]

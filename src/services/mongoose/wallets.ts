@@ -75,8 +75,6 @@ export const WalletsRepository = (): IWalletsRepository => {
 
 const resultToWallet = (result: UserType): Wallet => {
   const walletId = result.walletId as WalletId
-  const depositFeeRatio = result.depositFeeRatio as DepositFeeRatio
-  const withdrawFee = result.withdrawFee as WithdrawFee
 
   const onChainAddressIdentifiers = result.onchain
     ? result.onchain.map(({ pubkey, address }) => {
@@ -90,8 +88,6 @@ const resultToWallet = (result: UserType): Wallet => {
 
   return {
     id: walletId,
-    depositFeeRatio,
-    withdrawFee,
     onChainAddressIdentifiers,
     onChainAddresses,
   }
