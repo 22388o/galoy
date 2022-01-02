@@ -6,17 +6,8 @@ import {
   UnknownRepositoryError,
 } from "@domain/errors"
 import { User } from "@services/mongoose/schema"
-import { caseInsensitiveRegex } from "."
 
-const projection = {
-  level: 1,
-  status: 1,
-  coordinates: 1,
-  walletId: 1,
-  username: 1,
-  title: 1,
-  created_at: 1,
-}
+import { caseInsensitiveRegex } from "."
 
 export const AccountsRepository = (): IAccountsRepository => {
   const listUnlockedAccounts = async (): Promise<Account[] | RepositoryError> => {
@@ -155,3 +146,13 @@ const translateToAccount = (result: UserType): Account => ({
   walletIds: [result.walletId as WalletId],
   ownerId: result.id as UserId,
 })
+
+const projection = {
+  level: 1,
+  status: 1,
+  coordinates: 1,
+  walletId: 1,
+  username: 1,
+  title: 1,
+  created_at: 1,
+}
