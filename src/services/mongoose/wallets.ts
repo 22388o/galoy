@@ -12,7 +12,7 @@ import { caseInsensitiveRegex } from "./users"
 export const WalletsRepository = (): IWalletsRepository => {
   const findById = async (walletId: WalletId): Promise<Wallet | RepositoryError> => {
     try {
-      const result = await User.findOne({ walletId })
+      const result = await User.findOne({ walletId }, projection)
       if (!result) {
         return new CouldNotFindWalletFromIdError()
       }
@@ -26,7 +26,10 @@ export const WalletsRepository = (): IWalletsRepository => {
     username: Username,
   ): Promise<Wallet | RepositoryError> => {
     try {
-      const result = await User.findOne({ username: caseInsensitiveRegex(username) })
+      const result = await User.findOne(
+        { username: caseInsensitiveRegex(username) },
+        projection,
+      )
       if (!result) {
         return new CouldNotFindWalletFromUsernameError()
       }
@@ -41,7 +44,7 @@ export const WalletsRepository = (): IWalletsRepository => {
     address: OnChainAddress,
   ): Promise<Wallet | RepositoryError> => {
     try {
-      const result = await User.findOne({ "onchain.address": address })
+      const result = await User.findOne({ "onchain.address": address }, projection)
       if (!result) {
         return new CouldNotFindWalletFromOnChainAddressError()
       }
@@ -55,7 +58,10 @@ export const WalletsRepository = (): IWalletsRepository => {
     addresses: string[],
   ): Promise<Wallet[] | RepositoryError> => {
     try {
-      const result = await User.find({ "onchain.address": { $in: addresses } })
+      const result = await User.find(
+        { "onchain.address": { $in: addresses } },
+        projection,
+      )
       if (!result) {
         return new CouldNotFindWalletFromOnChainAddressesError()
       }
@@ -95,4 +101,10 @@ const resultToWallet = (result: UserType): Wallet => {
     onChainAddressIdentifiers,
     onChainAddresses,
   }
+}
+const projection = {
+  walletId: 1,
+  depositFeeRatio: 1,
+  withdrawFee: 1,
+  onchain: 1,
 }
