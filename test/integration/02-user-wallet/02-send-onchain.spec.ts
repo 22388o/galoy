@@ -1,3 +1,5 @@
+import { once } from "events"
+
 import { sleep } from "@app/utils"
 import * as Wallets from "@app/wallets"
 import {
@@ -15,16 +17,18 @@ import { onchainTransactionEventHandler } from "@servers/trigger"
 import { baseLogger } from "@services/logger"
 import { Transaction } from "@services/mongoose/schema"
 import { getTitle } from "@services/notifications/payment"
-import { once } from "events"
 import last from "lodash.last"
+
 import {
   bitcoindClient,
   bitcoindOutside,
   checkIsBalanced,
   createChainAddress,
+  createUserWallet,
   enable2FA,
   generateTokenHelper,
   getAndCreateUserWallet,
+  getDefaultWalletIdByTestUserIndex,
   lndonchain,
   lndOutside1,
   mineBlockAndSync,
@@ -43,21 +47,29 @@ jest.spyOn(global.Date, "now").mockImplementation(() => new Date(date).valueOf()
 let initialBalanceUser0
 let userWallet0, userWallet3, userWallet11, userWallet12 // using userWallet11 and userWallet12 to sendAll
 
+let wallet0: WalletId
+
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { sendNotification } = require("@services/notifications/notification")
 
 beforeAll(async () => {
   userWallet0 = await getAndCreateUserWallet(0)
+  wallet0 = await getDefaultWalletIdByTestUserIndex(0)
+
   userWallet3 = await getAndCreateUserWallet(3)
   userWallet11 = await getAndCreateUserWallet(11)
   userWallet12 = await getAndCreateUserWallet(12)
-  // load funder wallet before use it
-  await getAndCreateUserWallet(4)
+
+  // FIXME: make a function out ot it
+  await createUserWallet(4) // funder
+  await createUserWallet(6) // dealer
+  await createUserWallet(14) // bankowner
+
   await bitcoindClient.loadWallet({ filename: "outside" })
 })
 
 beforeEach(async () => {
-  initialBalanceUser0 = await getBTCBalance(userWallet0.user.walletId)
+  initialBalanceUser0 = await getBTCBalance(wallet0)
 })
 
 afterEach(async () => {
@@ -96,7 +108,7 @@ describe("UserWallet - onChainPay", () => {
 
     {
       const txResult = await Wallets.getTransactionsForWalletId({
-        walletId: userWallet0.user.walletId,
+        walletId: wallet0,
       })
       if (txResult.error instanceof Error || txResult.result === null) {
         throw txResult.error
@@ -109,7 +121,7 @@ describe("UserWallet - onChainPay", () => {
       expect(pendingTx.settlementAmount).toBe(-amount - pendingTx.settlementFee)
       pendingTxHash = pendingTx.id as OnChainTxHash
 
-      const interimBalance = await getBTCBalance(userWallet0.user.walletId)
+      const interimBalance = await getBTCBalance(wallet0)
       expect(interimBalance).toBe(initialBalanceUser0 - amount - pendingTx.settlementFee)
       await checkIsBalanced()
     }
@@ -135,7 +147,7 @@ describe("UserWallet - onChainPay", () => {
 
     {
       const txResult = await Wallets.getTransactionsForWalletId({
-        walletId: userWallet0.user.walletId,
+        walletId: wallet0,
       })
       if (txResult.error instanceof Error || txResult.result === null) {
         throw txResult.error
@@ -162,7 +174,7 @@ describe("UserWallet - onChainPay", () => {
 
       expect(settledTx.settlementUsdPerSat).toBeGreaterThan(0)
 
-      const finalBalance = await getBTCBalance(userWallet0.user.walletId)
+      const finalBalance = await getBTCBalance(wallet0)
       expect(finalBalance).toBe(initialBalanceUser0 - amount - fee)
     }
 
@@ -277,7 +289,7 @@ describe("UserWallet - onChainPay", () => {
     })
     expect(paymentResult).toBe(true)
     const { result: txs, error } = await Wallets.getTransactionsForWalletId({
-      walletId: userWallet0.user.walletId,
+      walletId: wallet0,
     })
     if (error instanceof Error || txs === null) {
       throw error
@@ -302,7 +314,7 @@ describe("UserWallet - onChainPay", () => {
 
     {
       const txResult = await Wallets.getTransactionsForWalletId({
-        walletId: userWallet0.user.walletId,
+        walletId: wallet0,
       })
       if (txResult.error instanceof Error || txResult.result === null) {
         throw txResult.error
@@ -335,7 +347,7 @@ describe("UserWallet - onChainPay", () => {
 
     const paid = await userWallet0.onChainPay({ address, amount, targetConfirmations })
 
-    const finalBalanceUser0 = await getBTCBalance(userWallet0.user.walletId)
+    const finalBalanceUser0 = await getBTCBalance(wallet0)
     const finalBalanceUser3 = await getBTCBalance(userWallet3.user.walletId)
 
     expect(paid).toBe(true)
@@ -344,7 +356,7 @@ describe("UserWallet - onChainPay", () => {
 
     {
       const txResult = await Wallets.getTransactionsForWalletId({
-        walletId: userWallet0.user.walletId,
+        walletId: wallet0,
       })
       if (txResult.error instanceof Error || txResult.result === null) {
         throw txResult.error
@@ -367,7 +379,7 @@ describe("UserWallet - onChainPay", () => {
       expect(settledTx.settlementAmount).toBe(-amount)
       expect(settledTx.settlementUsdPerSat).toBeGreaterThan(0)
 
-      const finalBalance = await getBTCBalance(userWallet0.user.walletId)
+      const finalBalance = await getBTCBalance(wallet0)
       expect(finalBalance).toBe(initialBalanceUser0 - amount)
     }
   })
@@ -393,7 +405,7 @@ describe("UserWallet - onChainPay", () => {
       tx.initiationVia.address === address
 
     const { result: txs, error } = await Wallets.getTransactionsForWalletId({
-      walletId: userWallet0.user.walletId,
+      walletId: wallet0,
     })
     if (error instanceof Error || txs === null) {
       throw error
@@ -467,7 +479,7 @@ describe("UserWallet - onChainPay", () => {
   })
 
   it("fails if try to send a transaction to self", async () => {
-    const address = await Wallets.createOnChainAddress(userWallet0.user.walletId)
+    const address = await Wallets.createOnChainAddress(wallet0)
     if (address instanceof Error) throw address
 
     await expect(
@@ -563,7 +575,7 @@ describe("UserWallet - onChainPay", () => {
   describe("2FA", () => {
     it("fails to pay above 2fa limit without 2fa token", async () => {
       enable2FA({ wallet: userWallet0 })
-      const remainingLimit = await getRemainingTwoFALimit(userWallet0.user.walletId)
+      const remainingLimit = await getRemainingTwoFALimit(wallet0)
       expect(remainingLimit).not.toBeInstanceOf(Error)
       if (remainingLimit instanceof Error) return remainingLimit
 
@@ -579,7 +591,7 @@ describe("UserWallet - onChainPay", () => {
     it("sends a successful large payment with a 2fa code", async () => {
       enable2FA({ wallet: userWallet0 })
 
-      const initialBalance = await getBTCBalance(userWallet0.user.walletId)
+      const initialBalance = await getBTCBalance(wallet0)
       const { address } = await createChainAddress({ format: "p2wpkh", lnd: lndOutside1 })
       const twoFAToken = generateTokenHelper({
         secret: userWallet0.user.twoFA.secret,
@@ -601,7 +613,7 @@ describe("UserWallet - onChainPay", () => {
       }
 
       const { result: txs, error } = await Wallets.getTransactionsForWalletId({
-        walletId: userWallet0.user.walletId,
+        walletId: wallet0,
       })
 
       if (error instanceof Error || txs === null) {
@@ -610,7 +622,7 @@ describe("UserWallet - onChainPay", () => {
 
       // settlementAmount is negative
       const expectedBalance = initialBalance + txs[0].settlementAmount
-      const finalBalance = await getBTCBalance(userWallet0.user.walletId)
+      const finalBalance = await getBTCBalance(wallet0)
       expect(expectedBalance).toBe(finalBalance)
     })
   })
